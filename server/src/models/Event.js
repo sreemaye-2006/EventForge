@@ -38,14 +38,13 @@ eventSchema.index({ organizationId: 1 });
 eventSchema.index({ status: 1 });
 eventSchema.index({ startDate: 1 });
 
-eventSchema.pre('save', function (next) {
+eventSchema.pre('save', function () {
   if (this.isModified('title') || !this.slug) {
     this.slug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '') + '-' + Date.now();
   }
-  next();
 });
 
 module.exports = mongoose.model('Event', eventSchema);

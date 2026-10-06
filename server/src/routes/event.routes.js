@@ -1,24 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const { protect, authorize, optionalAuth } = require('../middleware/auth');
 const ctrl = require('../controllers/event.controller');
 
-// Public routes
+// Public & discoverable routes
 router.get('/public', ctrl.getPublicEvents);
 router.get('/public/:slug', ctrl.getPublicEventBySlug);
+router.get('/', optionalAuth, ctrl.getEvents);
+router.get('/:id', optionalAuth, ctrl.getEvent);
 
-// Protected routes
-router.use(protect);
-
-router.route('/')
-  .get(ctrl.getEvents)
-  .post(authorize('ORGANIZER', 'ADMIN'), ctrl.createEvent);
-
-router.route('/:id')
-  .get(ctrl.getEvent)
-  .put(authorize('ORGANIZER', 'ADMIN'), ctrl.updateEvent)
-  .delete(authorize('ORGANIZER', 'ADMIN'), ctrl.deleteEvent);
-
+// Protected routes (Organizers / Admins)
+router.post('/', protect, authorize('ORGANIZER', 'ADMIN'), ctrl.createEvent);
+router.put('/:id', protect, authorize('ORGANIZER', 'ADMIN'), ctrl.updateEvent);
+router.delete('/:id', protect, authorize('ORGANIZER', 'ADMIN'), ctrl.deleteEvent);
 router.put('/:id/publish', protect, authorize('ORGANIZER', 'ADMIN'), ctrl.publishEvent);
 router.put('/:id/cancel', protect, authorize('ORGANIZER', 'ADMIN'), ctrl.cancelEvent);
 router.post('/:id/duplicate', protect, authorize('ORGANIZER', 'ADMIN'), ctrl.duplicateEvent);

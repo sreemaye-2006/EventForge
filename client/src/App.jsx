@@ -15,6 +15,7 @@ import OrganizerDashboard from './pages/organizer/OrganizerDashboard';
 import EventForm from './pages/organizer/EventForm';
 import EventsList from './pages/organizer/EventsList';
 import ManageEvent from './pages/organizer/ManageEvent';
+import AIEventAssistant from './pages/organizer/AIEventAssistant';
 import SpeakerDashboard from './pages/speaker/SpeakerDashboard';
 import SponsorDashboard from './pages/sponsor/SponsorDashboard';
 import AttendeeDashboard from './pages/attendee/AttendeeDashboard';
@@ -40,6 +41,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+const DashboardRedirect = () => {
+  const { user } = useAuthStore();
+  const role = (user?.role || 'attendee').toLowerCase();
+  return <Navigate to={`/dashboard/${role}`} replace />;
+};
+
 const App = () => {
   const { fetchUser } = useAuthStore();
 
@@ -48,7 +55,7 @@ const App = () => {
   }, [fetchUser]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Toaster position="top-right" />
       <Routes>
         <Route element={<MainLayout />}>
@@ -58,6 +65,12 @@ const App = () => {
           <Route path="/events" element={<EventDiscovery />} />
           <Route path="/events/:id" element={<EventDetails />} />
           <Route path="/events/:id/register" element={<RegistrationFlow />} />
+          <Route path="/attendee/ticket/:id" element={<Navigate to="/dashboard/attendee/tickets" replace />} />
+          <Route path="/attendee/dashboard" element={<Navigate to="/dashboard/attendee" replace />} />
+          <Route path="/staff/scanner" element={<Navigate to="/dashboard/staff/scanner" replace />} />
+          <Route path="/staff/dashboard" element={<Navigate to="/dashboard/staff" replace />} />
+          <Route path="/organizer/events" element={<Navigate to="/dashboard/organizer/events" replace />} />
+          <Route path="/organizer/events/create" element={<Navigate to="/dashboard/organizer/events/new" replace />} />
         </Route>
 
         <Route path="/dashboard" element={
@@ -65,18 +78,27 @@ const App = () => {
             <DashboardLayout />
           </ProtectedRoute>
         }>
+          <Route index element={<DashboardRedirect />} />
           <Route path="admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="organizer" element={<ProtectedRoute allowedRoles={['organizer']}><OrganizerDashboard /></ProtectedRoute>} />
           <Route path="organizer/events" element={<ProtectedRoute allowedRoles={['organizer']}><EventsList /></ProtectedRoute>} />
           <Route path="organizer/events/new" element={<ProtectedRoute allowedRoles={['organizer']}><EventForm /></ProtectedRoute>} />
+          <Route path="organizer/events/create" element={<ProtectedRoute allowedRoles={['organizer']}><EventForm /></ProtectedRoute>} />
           <Route path="organizer/events/:id" element={<ProtectedRoute allowedRoles={['organizer']}><ManageEvent /></ProtectedRoute>} />
+          <Route path="organizer/events/:id/manage" element={<ProtectedRoute allowedRoles={['organizer']}><ManageEvent /></ProtectedRoute>} />
+          <Route path="organizer/events/:id/edit" element={<ProtectedRoute allowedRoles={['organizer']}><EventForm /></ProtectedRoute>} />
+          <Route path="organizer/ai-assistant" element={<ProtectedRoute allowedRoles={['organizer']}><AIEventAssistant /></ProtectedRoute>} />
           <Route path="speaker" element={<ProtectedRoute allowedRoles={['speaker']}><SpeakerDashboard /></ProtectedRoute>} />
           <Route path="sponsor" element={<ProtectedRoute allowedRoles={['sponsor']}><SponsorDashboard /></ProtectedRoute>} />
           <Route path="attendee" element={<ProtectedRoute allowedRoles={['attendee']}><AttendeeDashboard /></ProtectedRoute>} />
           <Route path="attendee/tickets" element={<ProtectedRoute allowedRoles={['attendee']}><MyTicket /></ProtectedRoute>} />
+          <Route path="attendee/tickets/:id" element={<ProtectedRoute allowedRoles={['attendee']}><MyTicket /></ProtectedRoute>} />
           <Route path="staff" element={<ProtectedRoute allowedRoles={['staff']}><StaffDashboard /></ProtectedRoute>} />
           <Route path="staff/scanner" element={<ProtectedRoute allowedRoles={['staff']}><QRScanner /></ProtectedRoute>} />
         </Route>
+
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

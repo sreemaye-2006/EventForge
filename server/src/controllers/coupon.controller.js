@@ -31,14 +31,48 @@ exports.getCoupon = async (req, res) => {
 
 exports.validateCoupon = async (req, res) => {
   try {
-    const { code, eventId } = req.body;
-    const coupon = await Coupon.findOne({ code, eventId });
-    if (!coupon || !coupon.active || coupon.expiryDate < new Date() || coupon.usedCount >= coupon.maxUses) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired coupon' });
+    const code = req.body.code || req.query.code;
+    const eventId = req.body.eventId || req.query.eventId;
+    const ticketPrice = Number(req.body.ticketPrice || req.query.ticketPrice || 0);
+
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Coupon code is required' });
     }
-    res.status(200).json({ success: true, data: coupon });
+
+    const query = { code: code.toUpperCase() };
+    if (eventId) query.eventId = eventId;
+
+    const coupon = await Coupon.findOne(query);
+    if (!coupon || !coupon.active) {
+      return res.status(400).json({ success: false, message: 'Invalid coupon code' });
+    }
+
+    if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) {
+      return res.status(400).json({ success: false, message: 'This coupon has expired' });
+    }
+
+    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+      return res.status(400).json({ success: false, message: 'Coupon usage limit has been reached' });
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'PERCENTAGE') {
+      discountAmount = ticketPrice > 0 ? (ticketPrice * (coupon.discountValue / 100)) : coupon.discountValue;
+    } else {
+      discountAmount = coupon.discountValue;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: coupon,
+      coupon,
+      discountAmount,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      message: `Coupon applied: ${coupon.discountType === 'PERCENTAGE' ? coupon.discountValue + '% off' : '$' + coupon.discountValue + ' off'}`
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

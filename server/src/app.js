@@ -18,7 +18,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
   message: { success: false, message: 'Too many requests, please try again later.' }
 });
 app.use('/api/', limiter);
@@ -39,6 +39,7 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/organizations', require('./routes/organization.routes'));
 app.use('/api/events', require('./routes/event.routes'));
 app.use('/api/venues', require('./routes/venue.routes'));
@@ -53,6 +54,11 @@ app.use('/api/attendance', require('./routes/attendance.routes'));
 app.use('/api/feedback', require('./routes/feedback.routes'));
 app.use('/api/analytics', require('./routes/analytics.routes'));
 app.use('/api/ai', require('./routes/ai.routes'));
+app.use('/api/attendee', require('./routes/attendee.routes'));
+app.use('/api/organizer', require('./routes/organizer.routes'));
+app.use('/api/staff', require('./routes/staff.routes'));
+app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/recommendations', require('./routes/recommendation.routes'));
 
 // 404
 app.use((req, res) => {

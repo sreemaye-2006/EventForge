@@ -59,7 +59,35 @@ exports.createRegistration = async (req, res) => {
       qrData: qrDataStr
     });
 
-    res.status(201).json({ success: true, data: registration });
+    const formatRegistration = (reg) => {
+      const obj = reg.toObject ? reg.toObject() : reg;
+      const ev = obj.eventId || {};
+      const tt = obj.ticketTypeId || {};
+      const att = obj.attendeeId || {};
+      return {
+        ...obj,
+        id: obj._id,
+        attendeeName: att.name || req.user.name || 'Attendee',
+        status: (obj.status || 'APPROVED').toLowerCase() === 'approved' ? 'valid' : (obj.status || '').toLowerCase(),
+        event: {
+          id: ev._id || ev.id,
+          title: ev.title || 'Event',
+          date: ev.startDate || ev.date || new Date(),
+          location: ev.venueId?.name || ev.location || 'Main Venue'
+        },
+        ticketType: {
+          id: tt._id || tt.id,
+          name: tt.name || 'Standard Pass',
+          price: tt.price || obj.finalPrice || 0
+        }
+      };
+    };
+
+    res.status(201).json({ 
+      success: true, 
+      ticketId: registration._id, 
+      data: formatRegistration(registration) 
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -67,8 +95,36 @@ exports.createRegistration = async (req, res) => {
 
 exports.getRegistrations = async (req, res) => {
   try {
-    const registrations = await Registration.find({ attendeeId: req.user.id }).populate('eventId ticketTypeId');
-    res.status(200).json({ success: true, data: registrations });
+    const registrations = await Registration.find({ attendeeId: req.user._id })
+      .populate({ path: 'eventId', populate: { path: 'venueId', select: 'name address' } })
+      .populate('ticketTypeId')
+      .populate('attendeeId', 'name email');
+
+    const formatted = registrations.map(reg => {
+      const obj = reg.toObject();
+      const ev = obj.eventId || {};
+      const tt = obj.ticketTypeId || {};
+      const att = obj.attendeeId || {};
+      return {
+        ...obj,
+        id: obj._id,
+        attendeeName: att.name || req.user.name || 'Attendee',
+        status: (obj.status || 'APPROVED').toLowerCase() === 'approved' ? 'valid' : (obj.status || '').toLowerCase(),
+        event: {
+          id: ev._id,
+          title: ev.title || 'Event',
+          date: ev.startDate || new Date(),
+          location: ev.venueId?.name || 'Main Venue'
+        },
+        ticketType: {
+          id: tt._id,
+          name: tt.name || 'Pass',
+          price: tt.price || 0
+        }
+      };
+    });
+
+    res.status(200).json({ success: true, count: formatted.length, data: formatted });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -76,9 +132,36 @@ exports.getRegistrations = async (req, res) => {
 
 exports.getRegistration = async (req, res) => {
   try {
-    const registration = await Registration.findById(req.params.id).populate('eventId ticketTypeId');
+    const registration = await Registration.findById(req.params.id)
+      .populate({ path: 'eventId', populate: { path: 'venueId', select: 'name address' } })
+      .populate('ticketTypeId')
+      .populate('attendeeId', 'name email');
     if (!registration) return res.status(404).json({ success: false, message: 'Registration not found' });
-    res.status(200).json({ success: true, data: registration });
+    
+    const obj = registration.toObject();
+    const ev = obj.eventId || {};
+    const tt = obj.ticketTypeId || {};
+    const att = obj.attendeeId || {};
+    
+    const formatted = {
+      ...obj,
+      id: obj._id,
+      attendeeName: att.name || req.user.name || 'Attendee',
+      status: (obj.status || 'APPROVED').toLowerCase() === 'approved' ? 'valid' : (obj.status || '').toLowerCase(),
+      event: {
+        id: ev._id,
+        title: ev.title || 'Event',
+        date: ev.startDate || new Date(),
+        location: ev.venueId?.name || 'Main Venue'
+      },
+      ticketType: {
+        id: tt._id,
+        name: tt.name || 'Standard Pass',
+        price: tt.price || 0
+      }
+    };
+
+    res.status(200).json({ success: true, data: formatted });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -87,7 +170,7 @@ exports.getRegistration = async (req, res) => {
 exports.cancelRegistration = async (req, res) => {
   try {
     const registration = await Registration.findOneAndUpdate(
-      { _id: req.params.id, attendeeId: req.user.id },
+      { _id: req.params.id, attendeeId: req.user._id },
       { status: 'CANCELLED' },
       { new: true }
     );

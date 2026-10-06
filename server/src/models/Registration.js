@@ -30,11 +30,10 @@ registrationSchema.index({ eventId: 1 });
 registrationSchema.index({ attendeeId: 1 });
 registrationSchema.index({ eventId: 1, attendeeId: 1 });
 
-registrationSchema.pre('save', function (next) {
+registrationSchema.pre('save', function () {
   if (!this.registrationNumber) {
     this.registrationNumber = 'REG-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
   }
-  next();
 });
 
 module.exports = mongoose.model('Registration', registrationSchema);
